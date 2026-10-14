@@ -1,0 +1,7 @@
+ODT/
+output/
+*.log
+Cases/
+.space/
+*.reg
+*.csv

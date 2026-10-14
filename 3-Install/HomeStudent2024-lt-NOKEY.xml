@@ -1,0 +1,11 @@
+<!-- Office Home & Student 2024, 64-bit, Lithuanian. Installs WITHOUT a product key.
+     Activate afterwards: open Word > "Enter product key" (not "Sign in"). -->
+<Configuration>
+  <Add OfficeClientEdition="64" Channel="Current">
+    <Product ID="HomeStudent2024Retail">
+      <Language ID="lt-lt" />
+      <ExcludeApp ID="Teams" />
+    </Product>
+  </Add>
+  <Display Level="Full" AcceptEULA="TRUE" />
+</Configuration>

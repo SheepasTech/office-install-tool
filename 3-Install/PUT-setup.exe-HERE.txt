@@ -1,0 +1,9 @@
+Put the Office Deployment Tool's setup.exe in this folder.
+
+1. Download "Office Deployment Tool" from microsoft.com (Microsoft Download Center).
+2. Run the downloaded officedeploymenttool_xxxxx.exe, accept the license,
+   and extract it into this 3-Install folder.
+3. Keep setup.exe; the sample configuration-*.xml files it extracts can be deleted
+   (a copy of the sample is in _Reference).
+
+Install-Office.cmd also falls back to C:\ODT\setup.exe if it exists on the PC.
