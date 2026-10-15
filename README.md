@@ -41,7 +41,9 @@ The script asks for: edition, language(s), apps to exclude, MSI removal, install
 
 ## Logs
 
-A full transcript of every run is always saved to `%TEMP%\Debug\office-install-tool\<yyyy-MM-dd>\debug-install-<HHmmss>.log`, and the script offers a shortcut to the logs in `Desktop\Debug`. Details are in [docs/logging.txt](docs/logging.txt). To report a problem, copy the newest log into `debug\office\`.
+Every window the tool opens writes its own transcript to `%TEMP%\Debug\office-install-tool\<yyyy-MM-dd>\<name>-<yyyyMMdd-HHmmss>.log`, and a crash is also saved to a separate `crash-*.txt`. `Desktop\Debug.lnk` is a shortcut to `%TEMP%\Debug`. Details are in [docs/logging.txt](docs/logging.txt). To report a problem, copy the newest files into `debug\office\`.
+
+The cleanup scan and the diagnose report also list every Office license found (key last 5 characters only), its channel, and the install it belongs to.
 
 ## Parameters
 

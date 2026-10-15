@@ -38,14 +38,16 @@ if ($Language)   { $Language   = @($Language   | ForEach-Object { $_ -split ',' 
 if ($ExcludeApp) { $ExcludeApp = @($ExcludeApp | ForEach-Object { $_ -split ',' } | Where-Object { $_ }) }
 $Root = $PSScriptRoot
 
-# Log folder: %TEMP%\Debug\office-install-tool\<date>\ (one transcript per window: launcher, main, each step; plus Office's own setup logs).
-$script:LogRoot = Join-Path $env:TEMP 'Debug\office-install-tool'
-$script:LogDir = Join-Path $script:LogRoot (Get-Date -Format 'yyyy-MM-dd')
+# Debug logs: %TEMP%\Debug\office-install-tool\<date>\ - one transcript per window (launcher, main, each step), plus Office's own setup logs.
+try { . (Join-Path $Root 'lib\Debug-Log.ps1') } catch {
+    Write-Warning "Debug logging unavailable: $($_.Exception.Message)"
+    function Start-DebugLog { param($Name) }; function Stop-DebugLog {}; function Write-DebugCrash { param($ErrorRecord) }; function Initialize-DebugShortcut {}
+}
 
 # Relaunch elevated before any prompt, so the answers are not lost. -GenerateOnly needs no admin rights.
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole('Administrator')
 if (-not $isAdmin -and -not $GenerateOnly -and -not $Elevated) {
-    try { New-Item -ItemType Directory -Force $script:LogDir | Out-Null; Start-Transcript -Path (Join-Path $script:LogDir ('debug-launcher-{0}.log' -f (Get-Date -Format 'HHmmss'))) | Out-Null } catch {}
+    $null = Start-DebugLog 'launcher'
     Write-Host 'Administrator rights are needed; relaunching elevated...' -ForegroundColor Yellow
     $relaunch = @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"", '-Elevated')
     foreach ($kv in $PSBoundParameters.GetEnumerator()) {
@@ -53,32 +55,15 @@ if (-not $isAdmin -and -not $GenerateOnly -and -not $Elevated) {
         else { $relaunch += "-$($kv.Key)"; $relaunch += "`"$(@($kv.Value) -join ',')`"" }
     }
     Write-Host "Relaunch arguments: $($relaunch -join ' ')"
-    Start-Process powershell -Verb RunAs -ArgumentList $relaunch
-    try { Stop-Transcript | Out-Null } catch {}
+    try { Start-Process powershell -Verb RunAs -ArgumentList $relaunch }
+    catch { Write-DebugCrash $_; Write-Host "Could not start the elevated window: $($_.Exception.Message)" -ForegroundColor Red }
+    Stop-DebugLog
     return
 }
 
-# Debug log: always on. A full transcript goes to %TEMP%\Debug\office-install-tool\<date>\, and a shortcut in Desktop\Debug points at it.
-$script:Transcribing = $false
-try {
-    New-Item -ItemType Directory -Force $script:LogDir | Out-Null
-    $script:LogFile = Join-Path $script:LogDir ('debug-install-{0}.log' -f (Get-Date -Format 'HHmmss'))
-    Start-Transcript -Path $script:LogFile | Out-Null
-    $script:Transcribing = $true
-    Write-Host "Debug log: $script:LogDir" -ForegroundColor DarkGray
-} catch { Write-Warning "Could not start the debug log in $($script:LogDir): $($_.Exception.Message)" }
-try {
-    $lnkDir = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Debug'
-    $lnk = Join-Path $lnkDir 'office-install-tool.lnk'
-    if (-not (Test-Path -LiteralPath $lnk)) {
-        $make = -not [Environment]::UserInteractive -or ((Read-Host '  Put a shortcut to the logs in Desktop\Debug? (Y/n)') -notmatch '^[nN]')
-        if ($make) {
-            New-Item -ItemType Directory -Force $lnkDir | Out-Null
-            $sc = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk); $sc.TargetPath = $script:LogRoot; $sc.Save()
-            Write-Host "Shortcut created: $lnk" -ForegroundColor Green
-        }
-    }
-} catch { Write-Warning "Could not create the desktop shortcut ($($_.Exception.Message)). Logs are in $($script:LogDir)" }
+# Main window: own transcript, desktop Debug shortcut, crash details written to a separate file.
+$null = Start-DebugLog 'install'
+Initialize-DebugShortcut
 
 try {
 $OdtDir = Join-Path $Root 'ODT'
@@ -183,10 +168,10 @@ function Get-ErrorHint([string]$Text) {
 function Invoke-Step([string]$Script, [string[]]$StepArgs) {
     $p = Join-Path $Root $Script
     if (-not (Test-Path $p)) { Write-Warning "Not found: $p"; return }
-    $stepLog = Join-Path $script:LogDir ('debug-{0}-{1}.log' -f [IO.Path]::GetFileNameWithoutExtension($Script), (Get-Date -Format 'HHmmss'))
-    $inner = "Start-Transcript -Path '$stepLog' | Out-Null; try { & '$p' $($StepArgs -join ' ') } finally { Stop-Transcript | Out-Null }"
-    Write-Host "Step log: $stepLog" -ForegroundColor DarkGray
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $inner
+    # the step script starts its own debug log (lib\Debug-Log.ps1), so a crash in that window still leaves a file
+    try { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p @StepArgs }
+    catch { Write-DebugCrash $_; Write-Warning "Step failed: $($_.Exception.Message)" }
+    if ($LASTEXITCODE) { Write-Warning "$Script exited with code $LASTEXITCODE (see the newest log in $script:DebugDir)" }
 }
 
 # ---------------------------------------------------------------- download only
@@ -306,13 +291,17 @@ finally {
     # Office's own setup logs (the separate setup window): copy them next to the transcripts
     Get-ChildItem $env:TEMP -Filter "$env:COMPUTERNAME-*.log" -ErrorAction SilentlyContinue |
         Where-Object { $_.LastWriteTime -ge $started } |
-        ForEach-Object { try { Copy-Item $_.FullName (Join-Path $script:LogDir ('officesetup-' + $_.Name)) -Force } catch {} }
+        ForEach-Object { try { Copy-Item $_.FullName (Join-Path $script:DebugDir ('officesetup-' + $_.Name)) -Force } catch {} }
     $key = $null; $plain = $null
 }
+} catch {
+    Write-DebugCrash $_
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    throw
 } finally {
-    if ($script:Transcribing) { try { Stop-Transcript | Out-Null } catch {}; $script:Transcribing = $false }
-    # a typed key is never echoed, but scrub the transcript anyway
-    Get-ChildItem $script:LogDir -Filter '*.log' -ErrorAction SilentlyContinue | ForEach-Object {
-        try { (Get-Content $_.FullName -Raw) -replace '[A-Z0-9]{5}(-[A-Z0-9]{5}){4}', 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX' | Set-Content $_.FullName } catch {}
+    Stop-DebugLog
+    # Office setup logs copied above may contain a key-shaped string only if it was typed: scrub them too
+    Get-ChildItem $script:DebugDir -Filter "officesetup-*.log" -ErrorAction SilentlyContinue | ForEach-Object {
+        try { (Get-Content $_.FullName -Raw) -replace "[A-Z0-9]{5}(-[A-Z0-9]{5}){4}", "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" | Set-Content $_.FullName } catch {}
     }
 }

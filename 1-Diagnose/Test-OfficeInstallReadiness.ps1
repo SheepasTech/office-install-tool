@@ -63,6 +63,12 @@ if (-not $OdtPath) {
 }
 
 $ErrorActionPreference = 'Continue'
+try { . (Join-Path $PSScriptRoot '..\lib\Debug-Log.ps1'); . (Join-Path $PSScriptRoot '..\lib\Office-Licenses.ps1') }
+catch {
+    Write-Warning "Debug/license helpers unavailable: $($_.Exception.Message)"
+    function Start-DebugLog { param($Name) }; function Stop-DebugLog {}; function Write-DebugCrash { param($ErrorRecord) }
+}
+trap { Write-DebugCrash $_; break }
 $ReportDir = Join-Path ([Environment]::GetFolderPath('Desktop')) ('OfficeDiag_' + (Get-Date -Format 'yyyyMMdd_HHmmss'))
 $script:Checks = New-Object System.Collections.Generic.List[object]
 $SysDrive = $env:SystemDrive          # e.g. C:
@@ -142,7 +148,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
 }
 
 New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
-Start-Transcript -Path (Join-Path $ReportDir 'transcript.log') -Force | Out-Null
+$DebugLogFile = Start-DebugLog 'diagnose'
 
 try {
 
@@ -507,6 +513,19 @@ Invoke-Check 'Office' 'Existing Office installs' {
     else { Add-Check 'Office' 'Existing Office installs/leftovers' 'PASS' 'No Office installs or leftovers.' }
 }
 
+Invoke-Check 'Office' 'Office licenses and the install they belong to' {
+    $lic = Get-OfficeLicenseInfo
+    foreach ($i in $lic.Installs) { Add-Check 'Office' ('Install: ' + $i.Kind) 'INFO' ('{0} | version {1} | {2} {3}' -f $i.Name, $i.Version, $i.Platform, $i.Channel) }
+    if (-not $lic.Installs) { Add-Check 'Office' 'Installed Office' 'INFO' 'No Click-to-Run, MSI or Store Office found.' }
+    foreach ($l in $lic.Licenses) {
+        $what = if ($l.Last5) { 'Key ending ' + $l.Last5 } else { $l.Source }
+        $detail = '{0} | {1} | channel: {2} | status: {3} | belongs to: {4}' -f $l.Name, $l.Description, $l.Channel, $l.Status, $l.BelongsTo
+        $status = if ($l.BelongsTo -like 'no matching install*') { 'WARN' } else { 'INFO' }
+        Add-Check 'Office' ('License: ' + $what) $status $detail $(if ($status -eq 'WARN') { 'Orphan license of a removed install: Remove-OfficeLeftovers.ps1 removes it.' } else { '' })
+    }
+    if (-not $lic.Licenses) { Add-Check 'Office' 'Office licenses' 'INFO' 'No Office license keys or subscriptions found.' }
+}
+
 Invoke-Check 'Office' 'Office Deployment Tool' {
     $setup = Join-Path $OdtPath 'setup.exe'
     if (-not (Test-Path -LiteralPath $setup)) { Add-Check 'Office' 'Office Deployment Tool' 'INFO' "Not found at $setup (use -OdtPath if it is elsewhere)."; return }
@@ -592,7 +611,12 @@ Write-Host ''
 Write-Log "Report saved to: $ReportDir (report.txt, report.csv, transcript.log and extracts)"
 
 }
+catch {
+    Write-DebugCrash $_
+    Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
+}
 finally {
-    try { Stop-Transcript | Out-Null } catch { }
+    Stop-DebugLog
+    try { if ($DebugLogFile -and (Test-Path -LiteralPath $DebugLogFile)) { Copy-Item -LiteralPath $DebugLogFile -Destination (Join-Path $ReportDir 'transcript.log') -Force } } catch { }
 }
 Read-Host 'Press Enter to close'

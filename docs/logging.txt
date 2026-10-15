@@ -5,36 +5,46 @@ Debug logging is always on. It cannot be switched off.
 
 Where the logs are
 ------------------
-  %TEMP%\Debug\office-install-tool\<yyyy-MM-dd>
-  (usually C:\Users\<you>\AppData\Local\Temp\Debug\office-install-tool\<yyyy-MM-dd>)
+  %TEMP%\Debug\office-install-tool\<yyyy-MM-dd>\
+  (usually C:\Users\<you>\AppData\Local\Temp\Debug\office-install-tool\<yyyy-MM-dd>\)
 
-What is written there (one file per window)
--------------------------------------------
-  debug-launcher-<HHmmss>.log           the first window, before the administrator relaunch
-  debug-install-<HHmmss>.log            the elevated main window (menu, questions, install)
-  debug-Test-OfficeInstallReadiness-<HHmmss>.log   the readiness-check window (menu option 2)
-  debug-Remove-OfficeLeftovers-<HHmmss>.log        the scan / cleanup window (menu options 3 and 4)
-  officesetup-<PC>-<date>.log           Office's own setup logs, copied from %TEMP% when the install ends
-                                        (the Office installer window cannot be transcribed)
+Desktop\Debug.lnk is a shortcut to %TEMP%\Debug. On each run the script looks for it and, if
+it is missing, asks: Put a "Debug" shortcut (to the logs) on the desktop? (Y/n).
 
-Each window starts its own transcript and stops it when it ends, including after an error.
-Every run makes new files; old files are never overwritten.
+One file per window
+-------------------
+Every window or process starts its own transcript, named <name>-<yyyyMMdd-HHmmss>.log, so a
+window that crashes still leaves its own file:
+
+  launcher-...log      the first window, before the administrator relaunch
+  install-...log       the elevated main window (menu, questions, install)
+  diagnose-...log      the readiness-check window (menu option 2)
+  cleanup-...log       the scan / cleanup window (menu options 3 and 4)
+  officesetup-<PC>-<date>.log   Office's own setup logs, copied from %TEMP% when the install ends
+                       (the Office installer window itself cannot be transcribed)
+  crash-<timestamp>.txt   written separately whenever a window hits an unhandled error:
+                       message, line, stack trace and the log it belongs to
+
+The diagnose and cleanup windows also copy their log into their Desktop report folder
+(OfficeDiag_<date> / OfficeCleanup_<date>). Every run makes new files; old files are never overwritten.
+The shared code is lib\Debug-Log.ps1.
+
+Office licenses in the logs
+---------------------------
+The cleanup scan and the diagnose report list every Office license found, with the install it
+belongs to (lib\Office-Licenses.ps1): the licensing service (key's last 5 characters, channel
+Retail / OEM / Volume KMS / Volume MAK / Subscription, status), registry registrations, account
+(Microsoft 365) licensing with e-mail addresses partly hidden, and the license token cache.
+Installs are Click-to-Run (with update channel), MSI or Microsoft Store. A license that matches
+no install is reported as an orphan license. Full product keys are never read or printed.
 
 Other logs
 ----------
-  - Office's own setup logs: %TEMP%\<PC name>-<date>.log (product keys redacted).
   - Job record (no key): Cases\<date>_<PC>\install-jobs.log
   - Diagnose and cleanup reports: OfficeDiag_<date> / OfficeCleanup_<date> on the Desktop.
 
-Desktop shortcut
-----------------
-On each run the script looks for Desktop\Debug\office-install-tool.lnk (it points at the
-folder that holds all the dates). If it is missing it asks: Put a shortcut to the logs in Desktop\Debug? (Y/n). Enter
-creates it, n skips it (it asks again next run).
-
 Sending a log for debugging
 ---------------------------
-Copy the newest debug-install-*.log into debug\office\ in the project folder.
-A typed product key is never echoed (hidden input), and any key-shaped text is replaced
-with XXXXX-XXXXX-XXXXX-XXXXX-XXXXX when the run ends. Delete the files in the logs
-folder when you are done.
+Copy the newest files into debug\office\ in the project folder. A typed product key is never echoed
+(hidden input), and any key-shaped text is replaced with XXXXX-XXXXX-XXXXX-XXXXX-XXXXX when a
+window ends. Delete the files in the logs folder when you are done.

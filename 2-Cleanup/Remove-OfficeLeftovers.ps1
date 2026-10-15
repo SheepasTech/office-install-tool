@@ -78,6 +78,14 @@ param(
 )
 
 Set-StrictMode -Version 2.0
+
+# Debug log (own file per window) + license discovery. Both are optional: a missing lib must not stop the cleanup.
+try { . (Join-Path $PSScriptRoot '..\lib\Debug-Log.ps1'); . (Join-Path $PSScriptRoot '..\lib\Office-Licenses.ps1') }
+catch {
+    Write-Warning "Debug/license helpers unavailable: $($_.Exception.Message)"
+    function Start-DebugLog { param($Name) }; function Stop-DebugLog {}; function Write-DebugCrash { param($ErrorRecord) }
+}
+trap { Write-DebugCrash $_; break }
 $ErrorActionPreference = 'Continue'
 
 if (-not $BackupPath) {
@@ -103,7 +111,7 @@ $OfficeServices = @('ClickToRunSvc','OfficeSvc','osppsvc')
 
 $C2RExe = Join-Path $env:CommonProgramFiles 'Microsoft Shared\ClickToRun\OfficeClickToRun.exe'
 
-$CategoryOrder = @('Installed product','Click-to-Run configuration (info)','Office license key',
+$CategoryOrder = @('Installed product','Click-to-Run configuration (info)','Office license key','Office license (info)',
                    'Running process','Service','Scheduled task','Shortcut','Folder','Registry key')
 
 $script:Results = New-Object System.Collections.Generic.List[object]
@@ -272,6 +280,25 @@ function Get-OfficeFindings {
         }
     }
 
+    # 3b. Full license picture: every key/subscription and the install it belongs to
+    Write-Log 'Looking for all Office licenses (licensing service, registry, account) and the install each belongs to...' 'STEP'
+    try {
+        $lic = Get-OfficeLicenseInfo
+        foreach ($i in $lic.Installs) {
+            Write-Log ('Install: {0} | {1} | version {2} | {3} {4}' -f $i.Kind, $i.Name, $i.Version, $i.Platform, $i.Channel) 'DETAIL'
+        }
+        foreach ($l in $lic.Licenses) {
+            $tail = if ($l.Last5) { " key ending $($l.Last5)" } else { '' }
+            $detail = 'Source: {0} | Channel: {1} | Status: {2} | Belongs to: {3}' -f $l.Source, $l.Channel, $l.Status, $l.BelongsTo
+            if ($l.Description) { $detail += " | $($l.Description)" }
+            if ($l.Note) { $detail += " | $($l.Note)" }
+            $ospp = @($found | Where-Object { $_.Category -eq 'Office license key' -and $l.Last5 -and $_.Data.Last5 -eq $l.Last5 })
+            if ($ospp.Count -gt 0) { $ospp[0].Detail += " | Channel: $($l.Channel) | Belongs to: $($l.BelongsTo)"; continue }
+            $found.Add((New-Finding 'Office license (info)' ("$($l.Name)$tail") $l.Source $detail @{ License = $l }))
+        }
+    }
+    catch { Write-Log "License discovery failed: $($_.Exception.Message)" 'WARN' }
+
     # 4. Running processes ----------------------------------------------------
     Write-Log 'Checking for running Office processes...' 'STEP'
     $procs = @(Get-Process -Name ($OfficeAppProcesses + $OfficeEngineProcesses) -ErrorAction SilentlyContinue)
@@ -408,8 +435,7 @@ if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProces
 }
 
 New-Item -ItemType Directory -Path $BackupPath -Force | Out-Null
-$transcript = Join-Path $BackupPath 'OfficeCleanup.log'
-Start-Transcript -Path $transcript -Force | Out-Null
+$DebugLogFile = Start-DebugLog 'cleanup'
 
 try {
     Write-Section 'Office leftovers cleanup - SCAN (nothing is changed yet)'
@@ -430,7 +456,7 @@ try {
     }
     Show-Findings $findings
 
-    $actionable = @($findings | Where-Object { $_.Category -ne 'Click-to-Run configuration (info)' })
+    $actionable = @($findings | Where-Object { $_.Category -notlike '*(info)' })
     $findings | Select-Object Category, Name, Target, Detail |
         ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $BackupPath 'findings.json') -Encoding UTF8
     Write-Log ("{0} item(s) can be removed. Full list saved to findings.json" -f $actionable.Count)
@@ -655,7 +681,7 @@ try {
 
     # ---- 11. Verify --------------------------------------------------------
     Write-Section 'Step 11/11 - Re-scanning to verify'
-    $remaining = @(Get-OfficeFindings | Where-Object { $_.Category -ne 'Click-to-Run configuration (info)' })
+    $remaining = @(Get-OfficeFindings | Where-Object { $_.Category -notlike '*(info)' })
 
     Write-Section 'SUMMARY'
     $ok      = @($script:Results | Where-Object { $_.Status -eq 'OK' }).Count
@@ -679,12 +705,17 @@ try {
     $restart = Read-Host '  Restart now? (Y/N)'
     if ($restart -match '^[Yy]') {
         Write-Log 'Restarting in 10 seconds...' 'INFO'
-        Stop-Transcript | Out-Null
+        Stop-DebugLog
         Start-Sleep -Seconds 10
         Restart-Computer -Force
     }
 }
+catch {
+    Write-DebugCrash $_
+    Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
+}
 finally {
-    try { Stop-Transcript | Out-Null } catch { }
+    Stop-DebugLog
+    try { if ($DebugLogFile -and (Test-Path -LiteralPath $DebugLogFile)) { Copy-Item -LiteralPath $DebugLogFile -Destination (Join-Path $BackupPath 'OfficeCleanup.log') -Force } } catch { }
 }
 Read-Host 'Press Enter to close'
