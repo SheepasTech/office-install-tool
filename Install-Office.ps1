@@ -275,8 +275,8 @@ try {
         $hint = Get-ErrorHint "$logText 0-2031 ($($p.ExitCode))"
         if ($hint) { Write-Host "Likely cause: $hint" -ForegroundColor Yellow }
     }
-    # short job log in the Cases folder; never contains a key
-    $caseDir = Join-Path $Root ("Cases\{0}_{1}" -f (Get-Date -Format 'yyyy-MM-dd'), $env:COMPUTERNAME)
+    # short job log next to the other logs; never contains a key
+    $caseDir = Join-Path $env:TEMP ('Debug\office-install-tool\' + (Get-Date -Format 'yyyy-MM-dd'))
     New-Item -ItemType Directory -Force $caseDir | Out-Null
     Add-Content (Join-Path $caseDir 'install-jobs.log') ("{0:s} | {1} | x{2} | {3} | key: {4} | exit {5}" -f (Get-Date), $item.Id, $Arch, ($Language -join '+'), $(if ($key) { 'provided' } else { 'none' }), $p.ExitCode)
     if ($key -and $p.ExitCode -ne 0) { Write-Host 'If it failed within seconds with 30175-45 / 17004, the key was rejected: rerun and press Enter at the key prompt, then enter the key in Word.' -ForegroundColor Yellow }

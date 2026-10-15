@@ -96,8 +96,8 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 cd <USB drive>:\office-install-tool
 ```
 
-Both scripts save their output to a new folder on the **client's Desktop**
-(`OfficeDiag_<date>` / `OfficeCleanup_<date>`). Copy those into `Cases\<date>_<PC name>\`
+Both scripts save their output to a new folder under `%TEMP%\Debug\office-install-tool\<date>\` (reachable from the `Desktop\Debug` shortcut)
+(`OfficeDiag_<timestamp>` / `OfficeCleanup_<timestamp>`). Copy those into `Cases\<date>_<PC name>\`
 when you're done.
 
 ## Install procedure

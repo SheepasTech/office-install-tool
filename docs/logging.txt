@@ -25,8 +25,11 @@ window that crashes still leaves its own file:
   crash-<timestamp>.txt   written separately whenever a window hits an unhandled error:
                        message, line, stack trace and the log it belongs to
 
-The diagnose and cleanup windows also copy their log into their Desktop report folder
-(OfficeDiag_<date> / OfficeCleanup_<date>). Every run makes new files; old files are never overwritten.
+Everything is written to that one folder, nothing goes to the Desktop except the Debug shortcut:
+  OfficeDiag_<timestamp>\       diagnose report (report.txt, report.csv, extracts)
+  OfficeCleanup_<timestamp>\    cleanup registry backups, MSI uninstall logs, findings JSON
+  install-jobs.log             one-line record per install (no key)
+Every run makes new files; old files are never overwritten.
 The shared code is lib\Debug-Log.ps1.
 
 Office licenses in the logs
@@ -37,11 +40,6 @@ Retail / OEM / Volume KMS / Volume MAK / Subscription, status), registry registr
 (Microsoft 365) licensing with e-mail addresses partly hidden, and the license token cache.
 Installs are Click-to-Run (with update channel), MSI or Microsoft Store. A license that matches
 no install is reported as an orphan license. Full product keys are never read or printed.
-
-Other logs
-----------
-  - Job record (no key): Cases\<date>_<PC>\install-jobs.log
-  - Diagnose and cleanup reports: OfficeDiag_<date> / OfficeCleanup_<date> on the Desktop.
 
 Sending a log for debugging
 ---------------------------

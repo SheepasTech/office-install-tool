@@ -41,7 +41,7 @@
     removed if you pass -IncludeUserSettings.
 
     A full log (transcript), the registry backups, a JSON list of findings and
-    MSI uninstall logs are saved to a folder on your Desktop.
+    MSI uninstall logs are saved to a folder under %TEMP%\Debug\office-install-tool\<date>.
 
 .PARAMETER ScanOnly
     Only scan and list. Never removes anything.
@@ -53,7 +53,7 @@
 
 .PARAMETER BackupPath
     Where to store the log and backups.
-    Default: Desktop\OfficeCleanup_<date>_<time>
+    Default: %TEMP%\Debug\office-install-tool\<date>\OfficeCleanup_<date>_<time>
 
 .EXAMPLE
     .\Remove-OfficeLeftovers.ps1 -ScanOnly
@@ -89,7 +89,7 @@ trap { Write-DebugCrash $_; break }
 $ErrorActionPreference = 'Continue'
 
 if (-not $BackupPath) {
-    $BackupPath = Join-Path ([Environment]::GetFolderPath('Desktop')) ('OfficeCleanup_' + (Get-Date -Format 'yyyyMMdd_HHmmss'))
+    $BackupPath = Join-Path (Join-Path $env:TEMP ('Debug\office-install-tool\' + (Get-Date -Format 'yyyy-MM-dd'))) ('OfficeCleanup_' + (Get-Date -Format 'yyyyMMdd_HHmmss'))
 }
 
 # --------------------------------------------------------------------------
@@ -716,6 +716,5 @@ catch {
 }
 finally {
     Stop-DebugLog
-    try { if ($DebugLogFile -and (Test-Path -LiteralPath $DebugLogFile)) { Copy-Item -LiteralPath $DebugLogFile -Destination (Join-Path $BackupPath 'OfficeCleanup.log') -Force } } catch { }
 }
 Read-Host 'Press Enter to close'

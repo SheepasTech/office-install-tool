@@ -8,7 +8,7 @@
     Checks everything that commonly breaks an Office install and prints a
     PASS / WARN / FAIL / INFO line for each, with a suggested fix.
     NOTHING on the system is changed. The only writes are temporary test files
-    (deleted straight away) and the report folder on your Desktop.
+    (deleted straight away) and the report folder under %TEMP%\Debug\office-install-tool\<date>.
 
     Checks:
       System     - Windows version/build, admin, 64-bit, pending reboot
@@ -69,7 +69,7 @@ catch {
     function Start-DebugLog { param($Name) }; function Stop-DebugLog {}; function Write-DebugCrash { param($ErrorRecord) }
 }
 trap { Write-DebugCrash $_; break }
-$ReportDir = Join-Path ([Environment]::GetFolderPath('Desktop')) ('OfficeDiag_' + (Get-Date -Format 'yyyyMMdd_HHmmss'))
+$ReportDir = Join-Path (Join-Path $env:TEMP ('Debug\office-install-tool\' + (Get-Date -Format 'yyyy-MM-dd'))) ('OfficeDiag_' + (Get-Date -Format 'yyyyMMdd_HHmmss'))
 $script:Checks = New-Object System.Collections.Generic.List[object]
 $SysDrive = $env:SystemDrive          # e.g. C:
 $SysLetter = $SysDrive.TrimEnd(':')   # e.g. C
@@ -608,7 +608,7 @@ $sorted | Export-Csv -LiteralPath (Join-Path $ReportDir 'report.csv') -NoTypeInf
 $sorted | Format-Table Status, Area, Check, Detail -AutoSize -Wrap | Out-String -Width 400 |
     Set-Content -LiteralPath (Join-Path $ReportDir 'report.txt') -Encoding UTF8
 Write-Host ''
-Write-Log "Report saved to: $ReportDir (report.txt, report.csv, transcript.log and extracts)"
+Write-Log "Report saved to: $ReportDir (report.txt, report.csv and extracts; the diagnose log is the diagnose-*.log next to it)"
 
 }
 catch {
@@ -617,6 +617,5 @@ catch {
 }
 finally {
     Stop-DebugLog
-    try { if ($DebugLogFile -and (Test-Path -LiteralPath $DebugLogFile)) { Copy-Item -LiteralPath $DebugLogFile -Destination (Join-Path $ReportDir 'transcript.log') -Force } } catch { }
 }
 Read-Host 'Press Enter to close'
