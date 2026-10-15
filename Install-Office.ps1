@@ -45,7 +45,7 @@ try { . (Join-Path $Root 'lib\Debug-Log.ps1') } catch {
 }
 
 # Relaunch elevated before any prompt, so the answers are not lost. -GenerateOnly needs no admin rights.
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole('Administrator')
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin -and -not $GenerateOnly -and -not $Elevated) {
     $null = Start-DebugLog 'launcher'
     Write-Host 'Administrator rights are needed; relaunching elevated...' -ForegroundColor Yellow
@@ -236,7 +236,7 @@ if ($GenerateOnly) {
 }
 
 # ---------------------------------------------------------------- admin + setup.exe
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole('Administrator')
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) { throw 'Run this script as administrator (use Start-OfficeInstaller.cmd).' }
 
 $setup = Find-Setup

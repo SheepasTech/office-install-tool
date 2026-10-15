@@ -89,6 +89,7 @@ function Get-OfficeLicenseInfo {
     # 1. Licensing service (WMI): the authoritative list of installed product keys
     foreach ($cls in 'SoftwareLicensingProduct', 'OfficeSoftwareProtectionProduct') {
         try {
+            if (-not (Get-CimClass -ClassName $cls -ErrorAction SilentlyContinue)) { continue }
             $rows = @(Get-CimInstance -ClassName $cls -Filter "ApplicationId='$script:OfficeAppId' AND PartialProductKey IS NOT NULL" -ErrorAction Stop)
             foreach ($r in $rows) {
                 $desc = [string](Get-SafeProp $r 'Description')
