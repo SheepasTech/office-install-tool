@@ -33,7 +33,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\Install-Office.ps1
 ```
 
-Interactive runs open a short menu first: install now, read-only readiness check, scan for leftovers, or remove leftovers (the diagnose and cleanup scripts). After an install, a one-line job record (no key) goes to `Cases\<date>_<PC>\install-jobs.log`, and a failed setup prints a plain-words likely cause.
+Interactive runs open a short menu first: install now, read-only readiness check, scan for leftovers, or remove leftovers (the diagnose and cleanup scripts). After an install, a one-line job record (no key) goes to `install-jobs.log` in the same debug folder, and a failed setup prints a plain-words likely cause.
 
 The script asks for: edition, language(s), apps to exclude, MSI removal, installer window, and a product key.
 
