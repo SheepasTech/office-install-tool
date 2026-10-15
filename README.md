@@ -69,7 +69,7 @@ Examples:
 
 ## Editions
 
-Home & Student / Home & Business / Home / Professional 2024, Home & Student / Home & Business / Professional 2021, LTSC Professional Plus 2024 and 2021 (volume), Microsoft 365 Apps (enterprise, business, Family/Personal). Add more in the `$Catalog` list at the top of the script.
+Home & Student / Home & Business / Home / Professional 2024, Home & Student / Home & Business / Professional / Professional Plus (retail) 2021, LTSC Professional Plus 2024 and 2021 (volume), Microsoft 365 Apps (enterprise, business, Family/Personal). Add more in the `$Catalog` list at the top of the script.
 
 ## ODT download
 

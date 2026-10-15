@@ -81,6 +81,7 @@ $Catalog = @(
     @{ Name = 'Office Home & Student 2021';        Id = 'HomeStudent2021Retail';   Channel = 'Current' }
     @{ Name = 'Office Home & Business 2021';       Id = 'HomeBusiness2021Retail';  Channel = 'Current' }
     @{ Name = 'Office Professional 2021';          Id = 'Professional2021Retail';  Channel = 'Current' }
+    @{ Name = 'Office Professional Plus 2021 (retail)'; Id = 'ProPlus2021Retail';   Channel = 'Current' }
     @{ Name = 'Office LTSC Professional Plus 2021 (volume)'; Id = 'ProPlus2021Volume'; Channel = 'PerpetualVL2021' }
     @{ Name = 'Microsoft 365 Apps for enterprise'; Id = 'O365ProPlusRetail';       Channel = 'Current' }
     @{ Name = 'Microsoft 365 Apps for business';   Id = 'O365BusinessRetail';      Channel = 'Current' }
