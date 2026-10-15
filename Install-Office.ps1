@@ -36,6 +36,19 @@ $ErrorActionPreference = 'Stop'
 if ($Language)   { $Language   = @($Language   | ForEach-Object { $_ -split ',' } | Where-Object { $_ }) }
 if ($ExcludeApp) { $ExcludeApp = @($ExcludeApp | ForEach-Object { $_ -split ',' } | Where-Object { $_ }) }
 $Root = $PSScriptRoot
+
+# Relaunch elevated before any prompt, so the answers are not lost. -GenerateOnly needs no admin rights.
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole('Administrator')
+if (-not $isAdmin -and -not $GenerateOnly) {
+    Write-Host 'Administrator rights are needed; relaunching elevated...' -ForegroundColor Yellow
+    $relaunch = @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"")
+    foreach ($kv in $PSBoundParameters.GetEnumerator()) {
+        if ($kv.Value -is [switch]) { if ($kv.Value.IsPresent) { $relaunch += "-$($kv.Key)" } }
+        else { $relaunch += "-$($kv.Key)"; $relaunch += "`"$(@($kv.Value) -join ',')`"" }
+    }
+    Start-Process powershell -Verb RunAs -ArgumentList $relaunch
+    return
+}
 $OdtDir = Join-Path $Root 'ODT'
 $OutDir = Join-Path $Root 'output'
 $OdtPage = 'https://www.microsoft.com/en-us/download/details.aspx?id=49117'
