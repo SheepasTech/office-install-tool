@@ -6,4 +6,4 @@ Cases/
 *.reg
 *.csv
 
-testtest
+debug/*
