@@ -8,13 +8,17 @@ Where the logs are
   %TEMP%\Debug\office-install-tool\<yyyy-MM-dd>
   (usually C:\Users\<you>\AppData\Local\Temp\Debug\office-install-tool\<yyyy-MM-dd>)
 
-What is written there
----------------------
-  debug-install-<HHmmss>.log   full console transcript of an Install-Office.ps1 run
+What is written there (one file per window)
+-------------------------------------------
+  debug-launcher-<HHmmss>.log           the first window, before the administrator relaunch
+  debug-install-<HHmmss>.log            the elevated main window (menu, questions, install)
+  debug-Test-OfficeInstallReadiness-<HHmmss>.log   the readiness-check window (menu option 2)
+  debug-Remove-OfficeLeftovers-<HHmmss>.log        the scan / cleanup window (menu options 3 and 4)
+  officesetup-<PC>-<date>.log           Office's own setup logs, copied from %TEMP% when the install ends
+                                        (the Office installer window cannot be transcribed)
 
-The transcript starts in Install-Office.ps1 right after the administrator relaunch
-(so it is written by the elevated window), and stops when the script ends, including
-after an error. Every run makes a new file; old files are never overwritten.
+Each window starts its own transcript and stops it when it ends, including after an error.
+Every run makes new files; old files are never overwritten.
 
 Other logs
 ----------

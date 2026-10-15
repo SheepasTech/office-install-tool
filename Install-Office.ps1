@@ -38,22 +38,27 @@ if ($Language)   { $Language   = @($Language   | ForEach-Object { $_ -split ',' 
 if ($ExcludeApp) { $ExcludeApp = @($ExcludeApp | ForEach-Object { $_ -split ',' } | Where-Object { $_ }) }
 $Root = $PSScriptRoot
 
+# Log folder: %TEMP%\Debug\office-install-tool\<date>\ (one transcript per window: launcher, main, each step; plus Office's own setup logs).
+$script:LogRoot = Join-Path $env:TEMP 'Debug\office-install-tool'
+$script:LogDir = Join-Path $script:LogRoot (Get-Date -Format 'yyyy-MM-dd')
+
 # Relaunch elevated before any prompt, so the answers are not lost. -GenerateOnly needs no admin rights.
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole('Administrator')
 if (-not $isAdmin -and -not $GenerateOnly -and -not $Elevated) {
+    try { New-Item -ItemType Directory -Force $script:LogDir | Out-Null; Start-Transcript -Path (Join-Path $script:LogDir ('debug-launcher-{0}.log' -f (Get-Date -Format 'HHmmss'))) | Out-Null } catch {}
     Write-Host 'Administrator rights are needed; relaunching elevated...' -ForegroundColor Yellow
     $relaunch = @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"", '-Elevated')
     foreach ($kv in $PSBoundParameters.GetEnumerator()) {
         if ($kv.Value -is [switch]) { if ($kv.Value.IsPresent) { $relaunch += "-$($kv.Key)" } }
         else { $relaunch += "-$($kv.Key)"; $relaunch += "`"$(@($kv.Value) -join ',')`"" }
     }
+    Write-Host "Relaunch arguments: $($relaunch -join ' ')"
     Start-Process powershell -Verb RunAs -ArgumentList $relaunch
+    try { Stop-Transcript | Out-Null } catch {}
     return
 }
 
 # Debug log: always on. A full transcript goes to %TEMP%\Debug\office-install-tool\<date>\, and a shortcut in Desktop\Debug points at it.
-$script:LogRoot = Join-Path $env:TEMP 'Debug\office-install-tool'
-$script:LogDir = Join-Path $script:LogRoot (Get-Date -Format 'yyyy-MM-dd')
 $script:Transcribing = $false
 try {
     New-Item -ItemType Directory -Force $script:LogDir | Out-Null
@@ -178,7 +183,10 @@ function Get-ErrorHint([string]$Text) {
 function Invoke-Step([string]$Script, [string[]]$StepArgs) {
     $p = Join-Path $Root $Script
     if (-not (Test-Path $p)) { Write-Warning "Not found: $p"; return }
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p @StepArgs
+    $stepLog = Join-Path $script:LogDir ('debug-{0}-{1}.log' -f [IO.Path]::GetFileNameWithoutExtension($Script), (Get-Date -Format 'HHmmss'))
+    $inner = "Start-Transcript -Path '$stepLog' | Out-Null; try { & '$p' $($StepArgs -join ' ') } finally { Stop-Transcript | Out-Null }"
+    Write-Host "Step log: $stepLog" -ForegroundColor DarkGray
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -Command $inner
 }
 
 # ---------------------------------------------------------------- download only
@@ -295,12 +303,16 @@ finally {
             Where-Object { $_.LastWriteTime -ge $started -and $_.Name -like "$env:COMPUTERNAME-*" } |
             ForEach-Object { try { (Get-Content $_.FullName -Raw).Replace($key, 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX') | Set-Content $_.FullName } catch {} }
     }
+    # Office's own setup logs (the separate setup window): copy them next to the transcripts
+    Get-ChildItem $env:TEMP -Filter "$env:COMPUTERNAME-*.log" -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -ge $started } |
+        ForEach-Object { try { Copy-Item $_.FullName (Join-Path $script:LogDir ('officesetup-' + $_.Name)) -Force } catch {} }
     $key = $null; $plain = $null
 }
 } finally {
     if ($script:Transcribing) { try { Stop-Transcript | Out-Null } catch {}; $script:Transcribing = $false }
     # a typed key is never echoed, but scrub the transcript anyway
-    if ($script:LogFile -and (Test-Path -LiteralPath $script:LogFile)) {
-        try { (Get-Content $script:LogFile -Raw) -replace '[A-Z0-9]{5}(-[A-Z0-9]{5}){4}', 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX' | Set-Content $script:LogFile } catch {}
+    Get-ChildItem $script:LogDir -Filter '*.log' -ErrorAction SilentlyContinue | ForEach-Object {
+        try { (Get-Content $_.FullName -Raw) -replace '[A-Z0-9]{5}(-[A-Z0-9]{5}){4}', 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX' | Set-Content $_.FullName } catch {}
     }
 }
