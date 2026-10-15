@@ -5,12 +5,12 @@ Debug logging is always on. It cannot be switched off.
 
 Where the logs are
 ------------------
-  %TEMP%\OfficeInstallTool\logs
-  (usually C:\Users\<you>\AppData\Local\Temp\OfficeInstallTool\logs)
+  %TEMP%\Debug\office-install-tool\<yyyy-MM-dd>
+  (usually C:\Users\<you>\AppData\Local\Temp\Debug\office-install-tool\<yyyy-MM-dd>)
 
 What is written there
 ---------------------
-  debug-install-<date>-<time>.log   full console transcript of an Install-Office.ps1 run
+  debug-install-<HHmmss>.log   full console transcript of an Install-Office.ps1 run
 
 The transcript starts in Install-Office.ps1 right after the administrator relaunch
 (so it is written by the elevated window), and stops when the script ends, including
@@ -24,8 +24,8 @@ Other logs
 
 Desktop shortcut
 ----------------
-On each run the script looks for "Office install logs.lnk" on the desktop. If it is
-missing it asks: Put an "Office install logs" shortcut on the desktop? (Y/n). Enter
+On each run the script looks for Desktop\Debug\office-install-tool.lnk (it points at the
+folder that holds all the dates). If it is missing it asks: Put a shortcut to the logs in Desktop\Debug? (Y/n). Enter
 creates it, n skips it (it asks again next run).
 
 Sending a log for debugging

@@ -41,7 +41,7 @@ The script asks for: edition, language(s), apps to exclude, MSI removal, install
 
 ## Logs
 
-A full transcript of every run is always saved to `%TEMP%\OfficeInstallTool\logs\debug-install-<date>-<time>.log`, and the script offers a desktop shortcut to that folder. Details are in [docs/logging.txt](docs/logging.txt). To report a problem, copy the newest log into `debug\office\`.
+A full transcript of every run is always saved to `%TEMP%\Debug\office-install-tool\<yyyy-MM-dd>\debug-install-<HHmmss>.log`, and the script offers a shortcut to the logs in `Desktop\Debug`. Details are in [docs/logging.txt](docs/logging.txt). To report a problem, copy the newest log into `debug\office\`.
 
 ## Parameters
 

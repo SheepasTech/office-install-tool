@@ -51,22 +51,25 @@ if (-not $isAdmin -and -not $GenerateOnly -and -not $Elevated) {
     return
 }
 
-# Debug log: always on. A full transcript goes to a fixed folder in %TEMP%, and a desktop shortcut points at it.
-$script:LogDir = Join-Path $env:TEMP 'OfficeInstallTool\logs'
+# Debug log: always on. A full transcript goes to %TEMP%\Debug\office-install-tool\<date>\, and a shortcut in Desktop\Debug points at it.
+$script:LogRoot = Join-Path $env:TEMP 'Debug\office-install-tool'
+$script:LogDir = Join-Path $script:LogRoot (Get-Date -Format 'yyyy-MM-dd')
 $script:Transcribing = $false
 try {
     New-Item -ItemType Directory -Force $script:LogDir | Out-Null
-    $script:LogFile = Join-Path $script:LogDir ('debug-install-{0}.log' -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+    $script:LogFile = Join-Path $script:LogDir ('debug-install-{0}.log' -f (Get-Date -Format 'HHmmss'))
     Start-Transcript -Path $script:LogFile | Out-Null
     $script:Transcribing = $true
     Write-Host "Debug log: $script:LogDir" -ForegroundColor DarkGray
 } catch { Write-Warning "Could not start the debug log in $($script:LogDir): $($_.Exception.Message)" }
 try {
-    $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Office install logs.lnk'
+    $lnkDir = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Debug'
+    $lnk = Join-Path $lnkDir 'office-install-tool.lnk'
     if (-not (Test-Path -LiteralPath $lnk)) {
-        $make = -not [Environment]::UserInteractive -or ((Read-Host '  Put an "Office install logs" shortcut on the desktop? (Y/n)') -notmatch '^[nN]')
+        $make = -not [Environment]::UserInteractive -or ((Read-Host '  Put a shortcut to the logs in Desktop\Debug? (Y/n)') -notmatch '^[nN]')
         if ($make) {
-            $sc = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk); $sc.TargetPath = $script:LogDir; $sc.Save()
+            New-Item -ItemType Directory -Force $lnkDir | Out-Null
+            $sc = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk); $sc.TargetPath = $script:LogRoot; $sc.Save()
             Write-Host "Shortcut created: $lnk" -ForegroundColor Green
         }
     }
