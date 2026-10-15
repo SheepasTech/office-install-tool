@@ -39,6 +39,10 @@ The script asks for: edition, language(s), apps to exclude, MSI removal, install
 
 **Product key:** typed with hidden input. Press Enter to skip, then activate in Word with *Enter product key*. A typed key goes only into a temporary config file, which is deleted afterwards, and into the setup log, which the script redacts afterwards.
 
+## Logs
+
+A full transcript of every run is always saved to `%TEMP%\OfficeInstallTool\logs\debug-install-<date>-<time>.log`, and the script offers a desktop shortcut to that folder. Details are in [docs/logging.txt](docs/logging.txt). To report a problem, copy the newest log into `debug\office\`.
+
 ## Parameters
 
 | Parameter | Meaning |

@@ -1,0 +1,36 @@
+DEBUG LOGGING
+=============
+
+Debug logging is always on. It cannot be switched off.
+
+Where the logs are
+------------------
+  %TEMP%\OfficeInstallTool\logs
+  (usually C:\Users\<you>\AppData\Local\Temp\OfficeInstallTool\logs)
+
+What is written there
+---------------------
+  debug-install-<date>-<time>.log   full console transcript of an Install-Office.ps1 run
+
+The transcript starts in Install-Office.ps1 right after the administrator relaunch
+(so it is written by the elevated window), and stops when the script ends, including
+after an error. Every run makes a new file; old files are never overwritten.
+
+Other logs
+----------
+  - Office's own setup logs: %TEMP%\<PC name>-<date>.log (product keys redacted).
+  - Job record (no key): Cases\<date>_<PC>\install-jobs.log
+  - Diagnose and cleanup reports: OfficeDiag_<date> / OfficeCleanup_<date> on the Desktop.
+
+Desktop shortcut
+----------------
+On each run the script looks for "Office install logs.lnk" on the desktop. If it is
+missing it asks: Put an "Office install logs" shortcut on the desktop? (Y/n). Enter
+creates it, n skips it (it asks again next run).
+
+Sending a log for debugging
+---------------------------
+Copy the newest debug-install-*.log into debug\office\ in the project folder.
+A typed product key is never echoed (hidden input), and any key-shaped text is replaced
+with XXXXX-XXXXX-XXXXX-XXXXX-XXXXX when the run ends. Delete the files in the logs
+folder when you are done.

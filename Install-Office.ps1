@@ -50,6 +50,29 @@ if (-not $isAdmin -and -not $GenerateOnly -and -not $Elevated) {
     Start-Process powershell -Verb RunAs -ArgumentList $relaunch
     return
 }
+
+# Debug log: always on. A full transcript goes to a fixed folder in %TEMP%, and a desktop shortcut points at it.
+$script:LogDir = Join-Path $env:TEMP 'OfficeInstallTool\logs'
+$script:Transcribing = $false
+try {
+    New-Item -ItemType Directory -Force $script:LogDir | Out-Null
+    $script:LogFile = Join-Path $script:LogDir ('debug-install-{0}.log' -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+    Start-Transcript -Path $script:LogFile | Out-Null
+    $script:Transcribing = $true
+    Write-Host "Debug log: $script:LogDir" -ForegroundColor DarkGray
+} catch { Write-Warning "Could not start the debug log in $($script:LogDir): $($_.Exception.Message)" }
+try {
+    $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Office install logs.lnk'
+    if (-not (Test-Path -LiteralPath $lnk)) {
+        $make = -not [Environment]::UserInteractive -or ((Read-Host '  Put an "Office install logs" shortcut on the desktop? (Y/n)') -notmatch '^[nN]')
+        if ($make) {
+            $sc = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk); $sc.TargetPath = $script:LogDir; $sc.Save()
+            Write-Host "Shortcut created: $lnk" -ForegroundColor Green
+        }
+    }
+} catch { Write-Warning "Could not create the desktop shortcut ($($_.Exception.Message)). Logs are in $($script:LogDir)" }
+
+try {
 $OdtDir = Join-Path $Root 'ODT'
 $OutDir = Join-Path $Root 'output'
 $OdtPage = 'https://www.microsoft.com/en-us/download/details.aspx?id=49117'
@@ -270,4 +293,11 @@ finally {
             ForEach-Object { try { (Get-Content $_.FullName -Raw).Replace($key, 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX') | Set-Content $_.FullName } catch {} }
     }
     $key = $null; $plain = $null
+}
+} finally {
+    if ($script:Transcribing) { try { Stop-Transcript | Out-Null } catch {}; $script:Transcribing = $false }
+    # a typed key is never echoed, but scrub the transcript anyway
+    if ($script:LogFile -and (Test-Path -LiteralPath $script:LogFile)) {
+        try { (Get-Content $script:LogFile -Raw) -replace '[A-Z0-9]{5}(-[A-Z0-9]{5}){4}', 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX' | Set-Content $script:LogFile } catch {}
+    }
 }
