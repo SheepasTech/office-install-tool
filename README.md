@@ -13,6 +13,17 @@ Universal Office installer for Windows. It builds the Office Deployment Tool (OD
 
 No product key is stored anywhere in this project.
 
+## Quick start
+
+Open PowerShell (Start, type `powershell`, Enter) and paste:
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force
+irm https://raw.githubusercontent.com/SheepasTech/office-install-tool/main/bootstrap.ps1 | iex
+```
+
+`-Scope Process` lifts the script policy for this window only. The bootstrap downloads the tool to `%TEMP%\office-install-tool`, asks for administrator rights and starts `Install-Office.ps1`. Pin a branch, tag or commit with `$env:OIT_REF`, or read `bootstrap.ps1` first: `irm | iex` runs whatever the URL serves.
+
 ## Use
 
 Double-click `Start-OfficeInstaller.cmd` (it asks for administrator rights), or from an administrator PowerShell:
