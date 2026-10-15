@@ -29,6 +29,7 @@ param(
     [switch]$GenerateOnly,                     # write the XML to .\output and stop (never contains a key)
     [switch]$DownloadOnly,                     # only fetch the ODT into .\ODT and stop
     [string]$OdtPath                           # folder holding setup.exe (default: .\ODT, script folder, C:\ODT)
+    ,[switch]$Elevated                         # internal: set on the elevated relaunch to prevent a relaunch loop
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,9 +40,9 @@ $Root = $PSScriptRoot
 
 # Relaunch elevated before any prompt, so the answers are not lost. -GenerateOnly needs no admin rights.
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole('Administrator')
-if (-not $isAdmin -and -not $GenerateOnly) {
+if (-not $isAdmin -and -not $GenerateOnly -and -not $Elevated) {
     Write-Host 'Administrator rights are needed; relaunching elevated...' -ForegroundColor Yellow
-    $relaunch = @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"")
+    $relaunch = @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"", '-Elevated')
     foreach ($kv in $PSBoundParameters.GetEnumerator()) {
         if ($kv.Value -is [switch]) { if ($kv.Value.IsPresent) { $relaunch += "-$($kv.Key)" } }
         else { $relaunch += "-$($kv.Key)"; $relaunch += "`"$(@($kv.Value) -join ',')`"" }
